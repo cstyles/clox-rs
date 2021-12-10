@@ -5,6 +5,11 @@ use crate::value::{Value, ValueArray};
 pub enum OpCode {
     Return,
     Constant,
+    Negate,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
 }
 
 impl From<u8> for OpCode {
@@ -14,6 +19,11 @@ impl From<u8> for OpCode {
         match byte {
             0 => Return,
             1 => Constant,
+            2 => Negate,
+            3 => Add,
+            4 => Subtract,
+            5 => Multiply,
+            6 => Divide,
             _ => panic!("Unknown opcode: {byte}"),
         }
     }
@@ -24,6 +34,11 @@ impl OpCode {
         match self {
             OpCode::Return => "OP_RETURN",
             OpCode::Constant => "OP_CONSTANT",
+            OpCode::Negate => "OP_NEGATE",
+            OpCode::Add => "OP_ADD",
+            OpCode::Subtract => "OP_SUBTRACT",
+            OpCode::Multiply => "OP_MULTIPLY",
+            OpCode::Divide => "OP_DIVIDE",
         }
     }
 }

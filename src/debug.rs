@@ -1,3 +1,4 @@
+#[allow(unused)]
 use crate::chunk::{Chunk, OpCode};
 use crate::value;
 
@@ -11,7 +12,7 @@ impl Chunk {
         }
     }
 
-    fn disassemble_instruction(&self, offset: usize) -> usize {
+    pub fn disassemble_instruction(&self, offset: usize) -> usize {
         print!("{:04} ", offset);
 
         if offset > 0 && self.lines[offset] == self.lines[offset - 1] {
@@ -24,10 +25,11 @@ impl Chunk {
         match instruction {
             OpCode::Return => self.simple_instruction(instruction.name(), offset),
             OpCode::Constant => self.constant_instruction(instruction.name(), offset),
-            _ => {
-                println!("Unknown opcode: {:?}", instruction);
-                offset + 1
-            }
+            OpCode::Negate => self.simple_instruction(instruction.name(), offset),
+            OpCode::Add => self.simple_instruction(instruction.name(), offset),
+            OpCode::Subtract => self.simple_instruction(instruction.name(), offset),
+            OpCode::Multiply => self.simple_instruction(instruction.name(), offset),
+            OpCode::Divide => self.simple_instruction(instruction.name(), offset),
         }
     }
 
