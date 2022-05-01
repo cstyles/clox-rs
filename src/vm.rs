@@ -110,4 +110,4 @@ impl Display for VmError {
 
 impl Error for VmError {}
 
-type InterpretResult = Result<(), VmError>;
+pub type InterpretResult = Result<(), VmError>;
