@@ -1,4 +1,6 @@
-#[derive(Debug)]
+use crate::token::{Token, TokenType};
+
+#[derive(Debug, Copy, Clone)]
 pub struct Scanner<'src> {
     start: &'src str,
     current: &'src str,
@@ -6,7 +8,6 @@ pub struct Scanner<'src> {
 }
 
 impl<'src> Scanner<'src> {
-    // TODO: use &'src [char]
     pub fn new(source: &'src str) -> Self {
         Self {
             start: source,
@@ -15,7 +16,7 @@ impl<'src> Scanner<'src> {
         }
     }
 
-    pub fn scan_token(&mut self) -> Token<'_> {
+    pub fn scan_token(&mut self) -> Token<'src> {
         self.skip_whitespace();
         self.start = self.current;
 
@@ -78,10 +79,10 @@ impl<'src> Scanner<'src> {
     }
 
     #[must_use]
-    fn make_token(&self, token_type: TokenType) -> Token<'_> {
+    fn make_token(&self, token_type: TokenType) -> Token<'src> {
         Token {
             token_type,
-            start: slice_to(self.start, self.current),
+            lexeme: slice_to(self.start, self.current),
             line: self.line,
         }
     }
@@ -90,7 +91,7 @@ impl<'src> Scanner<'src> {
     fn error_token<'msg>(&self, message: &'msg str) -> Token<'msg> {
         Token {
             token_type: TokenType::Error,
-            start: message,
+            lexeme: message,
             line: self.line,
         }
     }
@@ -164,7 +165,7 @@ impl<'src> Scanner<'src> {
         }
     }
 
-    fn string(&mut self) -> Token {
+    fn string(&mut self) -> Token<'src> {
         loop {
             match self.peek() {
                 None => return self.error_token("Unterminated string."),
@@ -185,7 +186,7 @@ impl<'src> Scanner<'src> {
         self.make_token(TokenType::String)
     }
 
-    fn number(&mut self) -> Token {
+    fn number(&mut self) -> Token<'src> {
         self.consume_digits();
 
         // Look for a fractional part.
@@ -209,7 +210,7 @@ impl<'src> Scanner<'src> {
         }
     }
 
-    fn identifier(&mut self) -> Token {
+    fn identifier(&mut self) -> Token<'src> {
         loop {
             match self.peek() {
                 None => break,
@@ -246,66 +247,6 @@ impl<'src> Scanner<'src> {
 
 const fn is_alpha(c: char) -> bool {
     c.is_ascii_alphabetic() || c == '_'
-}
-
-#[derive(Debug)]
-pub struct Token<'src> {
-    pub token_type: TokenType,
-    pub start: &'src str,
-    pub line: usize,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-#[allow(unused)]
-pub enum TokenType {
-    // Single-character tokens.
-    LeftParen,
-    RightParen,
-    LeftBrace,
-    RightBrace,
-    Comma,
-    Dot,
-    Minus,
-    Plus,
-    Semicolon,
-    Slash,
-    Star,
-
-    // One or two character tokens.
-    Bang,
-    BangEqual,
-    Equal,
-    EqualEqual,
-    Greater,
-    GreaterEqual,
-    Less,
-    LessEqual,
-
-    // Literals.
-    Identifier,
-    String,
-    Number,
-
-    // Keywords.
-    And,
-    Class,
-    Else,
-    False,
-    Fun,
-    For,
-    If,
-    Nil,
-    Or,
-    Print,
-    Return,
-    Super,
-    This,
-    True,
-    Var,
-    While,
-
-    Error,
-    Eof,
 }
 
 // fn ref_diff(start: &[char], current: &[char]) -> usize {

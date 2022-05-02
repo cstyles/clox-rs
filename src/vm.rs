@@ -7,6 +7,8 @@ use std::ops::Sub;
 
 use crate::chunk::Chunk;
 use crate::chunk::OpCode;
+use crate::compiler::Compiler;
+use crate::scanner::Scanner;
 use crate::value::{print_value, Value};
 
 #[derive(Debug, Default)]
@@ -24,7 +26,16 @@ impl Vm {
         }
     }
 
-    pub fn interpret(&mut self, chunk: Chunk) -> InterpretResult {
+    pub fn interpret(&mut self, source: &str) -> InterpretResult {
+        let scanner = Scanner::new(source);
+        let chunk = Chunk::new();
+        let compiler = Compiler::new(scanner, chunk);
+
+        let chunk = match compiler.compile() {
+            Ok(chunk) => chunk,
+            Err(_) => return Err(VmError::CompileError),
+        };
+
         self.chunk = chunk;
         self.ip = 0;
         self.run()
@@ -49,7 +60,6 @@ impl Vm {
                 }
                 OpCode::Constant => {
                     let constant = self.read_constant();
-                    println!("{constant}");
                     self.stack.push(constant);
                 }
                 OpCode::Negate => {
