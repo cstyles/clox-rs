@@ -1,4 +1,4 @@
-use num_enum::IntoPrimitive;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::chunk::{Chunk, OpCode};
 use crate::scanner::Scanner;
@@ -184,7 +184,7 @@ impl<'src> Compiler<'src> {
     }
 }
 
-#[derive(Debug, Copy, Clone, IntoPrimitive)]
+#[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 enum Precedence {
     None = 0,
@@ -202,21 +202,8 @@ enum Precedence {
 
 impl Precedence {
     fn higher(&self) -> Self {
-        use Precedence::*;
-
-        match self {
-            None => Assignment,
-            Assignment => Or,
-            Or => And,
-            And => Equality,
-            Equality => Comparison,
-            Comparison => Term,
-            Term => Factor,
-            Factor => Unary,
-            Unary => Call,
-            Call => Primary,
-            Primary => unreachable!(),
-        }
+        let as_u8: u8 = (*self).into();
+        Precedence::try_from(as_u8 + 1).unwrap()
     }
 }
 
