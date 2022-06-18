@@ -250,13 +250,13 @@ const fn is_alpha(c: char) -> bool {
 }
 
 // fn ref_diff(start: &[char], current: &[char]) -> usize {
-fn ref_diff(start: &str, current: &str) -> usize {
+fn ref_diff(start: &str, end: &str) -> usize {
     let start = start.as_ptr();
-    let current = current.as_ptr();
+    let end = end.as_ptr();
 
-    // SAFETY: `current` and `start` are derived from the same source.
+    // SAFETY: `start` and `end` are derived from the same source.
     // Pretty sure that as long as the original references are valid, this is too.
-    let diff = unsafe { current.offset_from(start) };
+    let diff = unsafe { end.offset_from(start) };
 
     // `current` is always >= start so diff will never be negative
     diff as usize
