@@ -1,5 +1,6 @@
 use std::io::{BufRead, Write};
 
+use compiler::Compiler;
 use vm::{Vm, VmError};
 
 mod chunk;
@@ -33,7 +34,13 @@ fn repl(mut vm: Vm) {
     print_prompt();
 
     while stdin.read_line(&mut buffer).is_ok() {
-        vm.interpret(buffer.trim());
+        let source = buffer.trim();
+        let chunk = match Compiler::compile(&vm, source) {
+            Err(_) => continue,
+            Ok(chunk) => chunk,
+        };
+
+        vm.interpret(chunk);
         buffer.clear();
         print_prompt();
     }
@@ -41,7 +48,16 @@ fn repl(mut vm: Vm) {
 
 fn run_file(mut vm: Vm, path: &str) {
     let source = std::fs::read_to_string(path).expect("error reading file");
-    match vm.interpret(&source) {
+
+    let chunk = match Compiler::compile(&vm, &source) {
+        Ok(chunk) => chunk,
+        Err(_) => {
+            eprintln!("couldn't compile source");
+            std::process::exit(65);
+        }
+    };
+
+    match vm.interpret(chunk) {
         Ok(_) => {}
         Err(VmError::CompileError) => std::process::exit(65),
         Err(VmError::RuntimeError) => std::process::exit(70),

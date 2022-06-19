@@ -5,9 +5,11 @@ use crate::object::Object;
 use crate::scanner::Scanner;
 use crate::token::{Token, TokenType};
 use crate::value::Value;
+use crate::vm::Vm;
 
 #[derive(Debug)]
-pub struct Compiler<'src> {
+pub struct Compiler<'src, 'vm> {
+    vm: &'vm Vm,
     scanner: Scanner<'src>,
     current: Option<Token<'src>>,
     previous: Option<Token<'src>>,
@@ -16,9 +18,13 @@ pub struct Compiler<'src> {
     compiling_chunk: Chunk,
 }
 
-impl<'src> Compiler<'src> {
-    pub fn new(scanner: Scanner<'src>, chunk: Chunk) -> Self {
+impl<'src, 'vm> Compiler<'src, 'vm> {
+    fn new(vm: &'vm Vm, source: &'src str) -> Self {
+        let scanner = Scanner::new(source);
+        let chunk = Chunk::new();
+
         Self {
+            vm,
             scanner,
             current: None,
             previous: None,
@@ -28,17 +34,19 @@ impl<'src> Compiler<'src> {
         }
     }
 
-    pub fn compile(mut self) -> Result<Chunk, ()> {
-        self.advance();
-        self.expression();
-        self.consume(TokenType::Eof, "Expect end of expression.");
+    pub fn compile(vm: &'vm Vm, source: &'src str) -> Result<Chunk, ()> {
+        let mut compiler = Self::new(vm, source);
 
-        self.end_compiler();
+        compiler.advance();
+        compiler.expression();
+        compiler.consume(TokenType::Eof, "Expect end of expression.");
 
-        if self.had_error {
+        compiler.end_compiler();
+
+        if compiler.had_error {
             Err(())
         } else {
-            Ok(self.compiling_chunk)
+            Ok(compiler.compiling_chunk)
         }
     }
 
@@ -219,7 +227,7 @@ struct ParseRule {
     precedence: Precedence,
 }
 
-type ParseFn = fn(compiler: &mut Compiler<'_>) -> ();
+type ParseFn = fn(compiler: &mut Compiler<'_, '_>) -> ();
 
 fn grouping(compiler: &mut Compiler) {
     compiler.expression();

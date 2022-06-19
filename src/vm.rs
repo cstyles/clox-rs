@@ -24,16 +24,7 @@ impl Vm {
         }
     }
 
-    pub fn interpret(&mut self, source: &str) -> InterpretResult {
-        let scanner = Scanner::new(source);
-        let chunk = Chunk::new();
-        let compiler = Compiler::new(scanner, chunk);
-
-        let chunk = match compiler.compile() {
-            Ok(chunk) => chunk,
-            Err(_) => return Err(VmError::CompileError),
-        };
-
+    pub fn interpret(&mut self, chunk: Chunk) -> InterpretResult {
         self.chunk = chunk;
         self.ip = 0;
         self.run()
