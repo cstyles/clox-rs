@@ -7,6 +7,7 @@ mod compiler;
 mod debug;
 mod object;
 mod scanner;
+mod string;
 mod token;
 mod value;
 mod vm;

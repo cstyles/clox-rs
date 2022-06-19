@@ -1,15 +1,5 @@
+use crate::string::LoxString;
 use core::ops::Add;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LoxString {
-    string: String,
-}
-
-impl From<String> for LoxString {
-    fn from(string: String) -> Self {
-        Self { string }
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Object {
@@ -22,7 +12,8 @@ impl Add<&Object> for &mut Object {
     fn add(mut self, rhs: &Object) -> Self::Output {
         match (&mut self, rhs) {
             (Object::Str(a), Object::Str(b)) => {
-                a.string.push_str(b.string.as_str());
+                // Discard the result because a's buffer is reused
+                let _ = a.add(b);
                 Ok(self)
             }
             _ => Err(()),
