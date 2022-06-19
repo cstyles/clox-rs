@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt::Display;
-use std::ops::{Add, Div, Mul, Not, Sub};
+use std::ops::{Div, Mul, Not, Sub};
 
 use crate::chunk::Chunk;
 use crate::chunk::OpCode;
@@ -67,7 +67,14 @@ impl Vm {
                         return Err(VmError::RuntimeError);
                     }
                 },
-                OpCode::Add => self.numeric_binary_op(Add::add)?,
+                OpCode::Add => match (self.stack.pop().unwrap(), self.stack.pop().unwrap()) {
+                    (Value::Number(b), Value::Number(a)) => self.stack.push(Value::Number(a + b)),
+                    (Value::Str(b), Value::Str(a)) => self.stack.push(Value::Str(a + b.as_str())),
+                    _ => {
+                        self.runtime_error("Operands must be two numbers or two strings.");
+                        return Err(VmError::RuntimeError);
+                    }
+                },
                 OpCode::Subtract => self.numeric_binary_op(Sub::sub)?,
                 OpCode::Multiply => self.numeric_binary_op(Mul::mul)?,
                 OpCode::Divide => self.numeric_binary_op(Div::div)?,

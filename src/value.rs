@@ -6,6 +6,7 @@ pub enum Value {
     Bool(bool),
     Nil,
     Number(f64),
+    Str(String),
 }
 
 impl Display for Value {
@@ -37,6 +38,7 @@ impl Value {
             Value::Bool(value) => !value,
             Value::Nil => true,
             Value::Number(_) => false,
+            Value::Str(_) => false,
         }
     }
 }

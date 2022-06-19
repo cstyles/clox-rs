@@ -273,6 +273,13 @@ fn literal(compiler: &mut Compiler) {
     }
 }
 
+fn string(compiler: &mut Compiler) {
+    let lexeme = compiler.previous.unwrap().lexeme;
+    let lexeme = &lexeme[1..lexeme.len() - 1];
+    let value = Value::Str(lexeme.to_string());
+    compiler.emit_constant(value);
+}
+
 static RULE_TABLE: [ParseRule; 40] = [
     // LeftParen
     ParseRule {
@@ -396,7 +403,7 @@ static RULE_TABLE: [ParseRule; 40] = [
     },
     // String
     ParseRule {
-        prefix: None,
+        prefix: Some(string),
         infix: None,
         precedence: Precedence::None,
     },
