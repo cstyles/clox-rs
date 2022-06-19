@@ -3,10 +3,11 @@ use std::error::Error;
 use std::fmt::Display;
 use std::ops::{Add, Div, Mul, Not, Sub};
 
+use fnv::FnvHashSet;
+
 use crate::chunk::Chunk;
 use crate::chunk::OpCode;
-use crate::compiler::Compiler;
-use crate::scanner::Scanner;
+use crate::string::LoxString;
 use crate::value::{print_value, Value};
 
 #[derive(Debug, Default)]
@@ -14,6 +15,7 @@ pub struct Vm {
     chunk: Chunk, // reference?
     ip: usize,
     stack: Vec<Value>,
+    strings: FnvHashSet<LoxString>,
 }
 
 impl Vm {
@@ -152,6 +154,12 @@ impl Vm {
 
     fn peek(&self, distance: usize) -> &Value {
         self.stack.get(self.stack.len() - 1 - distance).unwrap()
+    }
+
+    pub fn intern_string(&mut self, string: &LoxString) {
+        if !self.strings.contains(string) {
+            self.strings.insert(string.clone());
+        }
     }
 
     fn runtime_error(&self, message: impl AsRef<str>) {

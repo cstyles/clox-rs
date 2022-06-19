@@ -35,7 +35,7 @@ fn repl(mut vm: Vm) {
 
     while stdin.read_line(&mut buffer).is_ok() {
         let source = buffer.trim();
-        let chunk = match Compiler::compile(&vm, source) {
+        let chunk = match Compiler::compile(&mut vm, source) {
             Err(_) => continue,
             Ok(chunk) => chunk,
         };
@@ -49,7 +49,7 @@ fn repl(mut vm: Vm) {
 fn run_file(mut vm: Vm, path: &str) {
     let source = std::fs::read_to_string(path).expect("error reading file");
 
-    let chunk = match Compiler::compile(&vm, &source) {
+    let chunk = match Compiler::compile(&mut vm, &source) {
         Ok(chunk) => chunk,
         Err(_) => {
             eprintln!("couldn't compile source");

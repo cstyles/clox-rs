@@ -2,7 +2,7 @@ use core::ops::Add;
 use fnv::FnvHasher;
 use std::hash::{Hash, Hasher};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LoxString {
     string: String,
     hash: u64,

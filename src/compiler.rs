@@ -9,7 +9,7 @@ use crate::vm::Vm;
 
 #[derive(Debug)]
 pub struct Compiler<'src, 'vm> {
-    vm: &'vm Vm,
+    vm: &'vm mut Vm,
     scanner: Scanner<'src>,
     current: Option<Token<'src>>,
     previous: Option<Token<'src>>,
@@ -19,7 +19,7 @@ pub struct Compiler<'src, 'vm> {
 }
 
 impl<'src, 'vm> Compiler<'src, 'vm> {
-    fn new(vm: &'vm Vm, source: &'src str) -> Self {
+    fn new(vm: &'vm mut Vm, source: &'src str) -> Self {
         let scanner = Scanner::new(source);
         let chunk = Chunk::new();
 
@@ -34,7 +34,7 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         }
     }
 
-    pub fn compile(vm: &'vm Vm, source: &'src str) -> Result<Chunk, ()> {
+    pub fn compile(vm: &'vm mut Vm, source: &'src str) -> Result<Chunk, ()> {
         let mut compiler = Self::new(vm, source);
 
         compiler.advance();
@@ -285,7 +285,7 @@ fn literal(compiler: &mut Compiler) {
 fn string(compiler: &mut Compiler) {
     let lexeme = compiler.previous.unwrap().lexeme;
     let lexeme = &lexeme[1..lexeme.len() - 1];
-    let object = Object::new_string(lexeme);
+    let object = Object::new_string(compiler.vm, lexeme);
     let value = Value::Obj(Box::new(object));
 
     compiler.emit_constant(value);

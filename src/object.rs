@@ -1,4 +1,4 @@
-use crate::string::LoxString;
+use crate::{string::LoxString, vm::Vm};
 use core::ops::Add;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,7 +23,9 @@ impl Add<&Object> for &mut Object {
 
 impl Object {
     // This will be useful later when we want to run something whenever we create a new string
-    pub fn new_string(string: &str) -> Self {
-        Self::Str(LoxString::from(string.to_string()))
+    pub fn new_string(vm: &mut Vm, string: &str) -> Self {
+        let lox_string = LoxString::from(string.to_string());
+        vm.intern_string(&lox_string);
+        Self::Str(lox_string)
     }
 }
