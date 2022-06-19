@@ -40,7 +40,7 @@ fn repl(mut vm: Vm) {
 fn run_file(mut vm: Vm, path: &str) {
     let source = std::fs::read_to_string(path).expect("error reading file");
     match vm.interpret(&source) {
-        Ok(_) => todo!(),
+        Ok(_) => {}
         Err(VmError::CompileError) => std::process::exit(65),
         Err(VmError::RuntimeError) => std::process::exit(70),
     }
