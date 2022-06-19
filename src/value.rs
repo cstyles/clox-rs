@@ -1,13 +1,14 @@
 use std::cmp::{PartialEq, PartialOrd};
 use std::fmt::Display;
 
-#[derive(Debug, Clone, PartialEq)]
+use crate::object::Object;
+
+#[derive(Debug, Clone)]
 pub enum Value {
     Bool(bool),
     Nil,
     Number(f64),
-    #[allow(clippy::box_collection)]
-    Str(Box<String>),
+    Obj(Box<Object>),
 }
 
 impl Display for Value {
@@ -33,13 +34,24 @@ impl PartialOrd for Value {
     }
 }
 
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
+            (Self::Number(l0), Self::Number(r0)) => l0 == r0,
+            (Self::Obj(l0), Self::Obj(r0)) => **l0 == **r0,
+            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        }
+    }
+}
+
 impl Value {
     fn is_falsey(&self) -> bool {
         match *self {
             Value::Bool(value) => !value,
             Value::Nil => true,
             Value::Number(_) => false,
-            Value::Str(_) => false,
+            Value::Obj(_) => false,
         }
     }
 }

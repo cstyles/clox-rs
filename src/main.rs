@@ -5,6 +5,7 @@ use vm::{Vm, VmError};
 mod chunk;
 mod compiler;
 mod debug;
+mod object;
 mod scanner;
 mod token;
 mod value;

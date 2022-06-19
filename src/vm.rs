@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt::Display;
-use std::ops::{Div, Mul, Not, Sub};
+use std::ops::{Add, Div, Mul, Not, Sub};
 
 use crate::chunk::Chunk;
 use crate::chunk::OpCode;
@@ -69,9 +69,15 @@ impl Vm {
                 },
                 OpCode::Add => match (self.stack.pop().unwrap(), self.stack.pop().unwrap()) {
                     (Value::Number(b), Value::Number(a)) => self.stack.push(Value::Number(a + b)),
-                    (Value::Str(b), Value::Str(mut a)) => {
-                        a.as_mut().push_str(b.as_str());
-                        self.stack.push(Value::Str(a));
+                    (Value::Obj(b), Value::Obj(mut a)) => {
+                        // This reuses `a`'s buffer so we don't need to save the result
+                        match a.as_mut().add(b.as_ref()) {
+                            Err(()) => {
+                                self.runtime_error("Operands must be two numbers or two strings.");
+                                return Err(VmError::RuntimeError);
+                            }
+                            Ok(_a) => self.stack.push(Value::Obj(a)),
+                        }
                     }
                     _ => {
                         self.runtime_error("Operands must be two numbers or two strings.");
