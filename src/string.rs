@@ -3,10 +3,16 @@ use std::hash::{Hash, Hasher};
 
 use crate::vm::Vm;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Eq, Hash)]
 pub struct LoxString {
     string: String,
     hash: u64,
+}
+
+impl PartialEq<Self> for LoxString {
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+    }
 }
 
 impl From<String> for LoxString {
