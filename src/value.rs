@@ -32,41 +32,6 @@ impl PartialOrd for Value {
 }
 
 impl Value {
-    pub fn as_bool(&self) -> bool {
-        match *self {
-            Self::Bool(value) => value,
-            _ => panic!("{self} wasn't a bool!"),
-        }
-    }
-
-    pub fn as_number(&self) -> f64 {
-        match *self {
-            Self::Number(value) => value,
-            _ => panic!("{self} wasn't a number!"),
-        }
-    }
-
-    pub fn is_bool(&self) -> bool {
-        match self {
-            Self::Bool(..) => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_nil(&self) -> bool {
-        match self {
-            Self::Nil => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_number(&self) -> bool {
-        match self {
-            Self::Number(..) => true,
-            _ => false,
-        }
-    }
-
     fn is_falsey(&self) -> bool {
         match *self {
             Value::Bool(value) => !value,
