@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 
 use crate::vm::Vm;
 
-#[derive(Debug, Clone, Eq, Hash)]
+#[derive(Debug, Clone, Eq)]
 pub struct LoxString {
     string: String,
     hash: u64,
@@ -22,6 +22,12 @@ impl From<String> for LoxString {
         let hash = hasher.finish();
 
         Self { string, hash }
+    }
+}
+
+impl Hash for LoxString {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.hash.hash(state);
     }
 }
 
