@@ -276,7 +276,7 @@ fn literal(compiler: &mut Compiler) {
 fn string(compiler: &mut Compiler) {
     let lexeme = compiler.previous.unwrap().lexeme;
     let lexeme = &lexeme[1..lexeme.len() - 1];
-    let value = Value::Str(lexeme.to_string());
+    let value = Value::Str(Box::new(lexeme.to_string()));
     compiler.emit_constant(value);
 }
 

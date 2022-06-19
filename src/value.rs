@@ -6,7 +6,8 @@ pub enum Value {
     Bool(bool),
     Nil,
     Number(f64),
-    Str(String),
+    #[allow(clippy::box_collection)]
+    Str(Box<String>),
 }
 
 impl Display for Value {

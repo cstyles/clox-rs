@@ -69,7 +69,10 @@ impl Vm {
                 },
                 OpCode::Add => match (self.stack.pop().unwrap(), self.stack.pop().unwrap()) {
                     (Value::Number(b), Value::Number(a)) => self.stack.push(Value::Number(a + b)),
-                    (Value::Str(b), Value::Str(a)) => self.stack.push(Value::Str(a + b.as_str())),
+                    (Value::Str(b), Value::Str(mut a)) => {
+                        a.as_mut().push_str(b.as_str());
+                        self.stack.push(Value::Str(a));
+                    }
                     _ => {
                         self.runtime_error("Operands must be two numbers or two strings.");
                         return Err(VmError::RuntimeError);
