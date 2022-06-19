@@ -1,6 +1,7 @@
 #[allow(unused)]
 use crate::chunk::{Chunk, OpCode};
 use crate::value;
+use OpCode::*;
 
 impl Chunk {
     pub fn disassemble(&self, name: &str) {
@@ -23,13 +24,9 @@ impl Chunk {
 
         let instruction: &OpCode = &self.code[offset].into();
         match instruction {
-            OpCode::Return => self.simple_instruction(instruction.name(), offset),
-            OpCode::Constant => self.constant_instruction(instruction.name(), offset),
-            OpCode::Negate => self.simple_instruction(instruction.name(), offset),
-            OpCode::Add => self.simple_instruction(instruction.name(), offset),
-            OpCode::Subtract => self.simple_instruction(instruction.name(), offset),
-            OpCode::Multiply => self.simple_instruction(instruction.name(), offset),
-            OpCode::Divide => self.simple_instruction(instruction.name(), offset),
+            Constant => self.constant_instruction(instruction.name(), offset),
+            Return | Less | Greater | Equal | Not | False | True | Nil | Divide | Multiply
+            | Subtract | Add | Negate => self.simple_instruction(instruction.name(), offset),
         }
     }
 
@@ -42,7 +39,7 @@ impl Chunk {
         let constant = self.code[offset + 1];
 
         print!("{:-16} {:4} ", name, constant);
-        value::print_value(self.constants[constant as usize]);
+        value::print_value(&self.constants[constant as usize]);
         println!();
 
         offset + 2

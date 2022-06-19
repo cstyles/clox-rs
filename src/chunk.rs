@@ -10,6 +10,13 @@ pub enum OpCode {
     Subtract,
     Multiply,
     Divide,
+    Nil,
+    True,
+    False,
+    Not,
+    Equal,
+    Greater,
+    Less,
 }
 
 impl From<u8> for OpCode {
@@ -24,6 +31,13 @@ impl From<u8> for OpCode {
             4 => Subtract,
             5 => Multiply,
             6 => Divide,
+            7 => Nil,
+            8 => True,
+            9 => False,
+            10 => Not,
+            11 => Equal,
+            12 => Greater,
+            13 => Less,
             _ => panic!("Unknown opcode: {byte}"),
         }
     }
@@ -39,6 +53,13 @@ impl OpCode {
             OpCode::Subtract => "OP_SUBTRACT",
             OpCode::Multiply => "OP_MULTIPLY",
             OpCode::Divide => "OP_DIVIDE",
+            OpCode::Nil => "OP_NIL",
+            OpCode::True => "OP_TRUE",
+            OpCode::False => "OP_FALSE",
+            OpCode::Not => "OP_NOT",
+            OpCode::Equal => "OP_EQUAL",
+            OpCode::Greater => "OP_GREATER",
+            OpCode::Less => "OP_LESS",
         }
     }
 }

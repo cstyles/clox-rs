@@ -27,7 +27,6 @@ impl<'src> Compiler<'src> {
         }
     }
 
-    #[must_use]
     pub fn compile(mut self) -> Result<Chunk, ()> {
         self.advance();
         self.expression();
@@ -115,6 +114,11 @@ impl<'src> Compiler<'src> {
     fn emit_opcode(&mut self, opcode: OpCode) {
         let line = self.previous.unwrap().line;
         self.current_chunk_mut().write_opcode(opcode, line);
+    }
+
+    fn emit_opcodes(&mut self, opcode1: OpCode, opcode2: OpCode) {
+        self.emit_opcode(opcode1);
+        self.emit_opcode(opcode2);
     }
 
     fn end_compiler(&mut self) {
@@ -232,6 +236,12 @@ fn binary(compiler: &mut Compiler) {
         TokenType::Minus => compiler.emit_opcode(OpCode::Subtract),
         TokenType::Star => compiler.emit_opcode(OpCode::Multiply),
         TokenType::Slash => compiler.emit_opcode(OpCode::Divide),
+        TokenType::BangEqual => compiler.emit_opcodes(OpCode::Equal, OpCode::Not),
+        TokenType::EqualEqual => compiler.emit_opcode(OpCode::Equal),
+        TokenType::Greater => compiler.emit_opcode(OpCode::Greater),
+        TokenType::GreaterEqual => compiler.emit_opcodes(OpCode::Less, OpCode::Not),
+        TokenType::Less => compiler.emit_opcode(OpCode::Less),
+        TokenType::LessEqual => compiler.emit_opcodes(OpCode::Greater, OpCode::Not),
         _ => unreachable!(),
     }
 }
@@ -244,14 +254,23 @@ fn unary(compiler: &mut Compiler) {
 
     match operator_type {
         TokenType::Minus => compiler.emit_opcode(OpCode::Negate),
-        // TokenType::Bang => compiler.emit_opcode(OpCode::?),
+        TokenType::Bang => compiler.emit_opcode(OpCode::Not),
         _ => {}
     }
 }
 
 fn number(compiler: &mut Compiler) {
     let value: f64 = compiler.previous.unwrap().lexeme.parse().unwrap();
-    compiler.emit_constant(value);
+    compiler.emit_constant(Value::Number(value));
+}
+
+fn literal(compiler: &mut Compiler) {
+    match compiler.previous.unwrap().token_type {
+        TokenType::False => compiler.emit_opcode(OpCode::False),
+        TokenType::Nil => compiler.emit_opcode(OpCode::Nil),
+        TokenType::True => compiler.emit_opcode(OpCode::True),
+        _ => unreachable!(),
+    }
 }
 
 static RULE_TABLE: [ParseRule; 40] = [
@@ -323,15 +342,15 @@ static RULE_TABLE: [ParseRule; 40] = [
     },
     // Bang
     ParseRule {
-        prefix: None,
+        prefix: Some(unary),
         infix: None,
         precedence: Precedence::None,
     },
     // BangEqual
     ParseRule {
-        prefix: None,
-        infix: None,
-        precedence: Precedence::None,
+        prefix: Some(binary),
+        infix: Some(binary),
+        precedence: Precedence::Equality,
     },
     // Equal
     ParseRule {
@@ -341,33 +360,33 @@ static RULE_TABLE: [ParseRule; 40] = [
     },
     // EqualEqual
     ParseRule {
-        prefix: None,
-        infix: None,
-        precedence: Precedence::None,
+        prefix: Some(binary),
+        infix: Some(binary),
+        precedence: Precedence::Equality,
     },
     // Greater
     ParseRule {
-        prefix: None,
-        infix: None,
-        precedence: Precedence::None,
+        prefix: Some(binary),
+        infix: Some(binary),
+        precedence: Precedence::Comparison,
     },
     // GreaterEqual
     ParseRule {
-        prefix: None,
-        infix: None,
-        precedence: Precedence::None,
+        prefix: Some(binary),
+        infix: Some(binary),
+        precedence: Precedence::Comparison,
     },
     // Less
     ParseRule {
-        prefix: None,
-        infix: None,
-        precedence: Precedence::None,
+        prefix: Some(binary),
+        infix: Some(binary),
+        precedence: Precedence::Comparison,
     },
     // LessEqual
     ParseRule {
-        prefix: None,
-        infix: None,
-        precedence: Precedence::None,
+        prefix: Some(binary),
+        infix: Some(binary),
+        precedence: Precedence::Comparison,
     },
     // Identifier
     ParseRule {
@@ -407,7 +426,7 @@ static RULE_TABLE: [ParseRule; 40] = [
     },
     // False
     ParseRule {
-        prefix: None,
+        prefix: Some(literal),
         infix: None,
         precedence: Precedence::None,
     },
@@ -431,7 +450,7 @@ static RULE_TABLE: [ParseRule; 40] = [
     },
     // Nil
     ParseRule {
-        prefix: None,
+        prefix: Some(literal),
         infix: None,
         precedence: Precedence::None,
     },
@@ -467,7 +486,7 @@ static RULE_TABLE: [ParseRule; 40] = [
     },
     // True
     ParseRule {
-        prefix: None,
+        prefix: Some(literal),
         infix: None,
         precedence: Precedence::None,
     },

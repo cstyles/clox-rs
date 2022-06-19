@@ -1,9 +1,7 @@
+use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt::Display;
-use std::ops::Add;
-use std::ops::Div;
-use std::ops::Mul;
-use std::ops::Sub;
+use std::ops::{Add, Div, Mul, Not, Sub};
 
 use crate::chunk::Chunk;
 use crate::chunk::OpCode;
@@ -54,22 +52,39 @@ impl Vm {
             match instruction {
                 OpCode::Return => {
                     let value = self.stack.pop().unwrap();
-                    print_value(value);
+                    print_value(&value);
                     println!();
                     return Ok(());
                 }
                 OpCode::Constant => {
-                    let constant = self.read_constant();
+                    let constant = self.read_constant().clone();
                     self.stack.push(constant);
                 }
-                OpCode::Negate => {
+                OpCode::Negate => match self.stack.last_mut().unwrap() {
+                    Value::Number(value) => *value = -*value,
+                    _ => {
+                        self.runtime_error("Operand must be a number.");
+                        return Err(VmError::RuntimeError);
+                    }
+                },
+                OpCode::Add => self.numeric_binary_op(Add::add)?,
+                OpCode::Subtract => self.numeric_binary_op(Sub::sub)?,
+                OpCode::Multiply => self.numeric_binary_op(Mul::mul)?,
+                OpCode::Divide => self.numeric_binary_op(Div::div)?,
+                OpCode::Nil => self.stack.push(Value::Nil),
+                OpCode::True => self.stack.push(Value::Bool(true)),
+                OpCode::False => self.stack.push(Value::Bool(false)),
+                OpCode::Not => {
                     let top = self.stack.last_mut().unwrap();
-                    *top = -*top;
+                    *top = top.not();
                 }
-                OpCode::Add => self.binary_op(Add::add),
-                OpCode::Subtract => self.binary_op(Sub::sub),
-                OpCode::Multiply => self.binary_op(Mul::mul),
-                OpCode::Divide => self.binary_op(Div::div),
+                OpCode::Equal => {
+                    let b = self.stack.pop().unwrap();
+                    let a = self.stack.pop().unwrap();
+                    self.stack.push(Value::Bool(a == b));
+                }
+                OpCode::Greater => self.comparison_binary_op(Ordering::Greater)?,
+                OpCode::Less => self.comparison_binary_op(Ordering::Less)?,
             }
         }
     }
@@ -80,9 +95,9 @@ impl Vm {
         byte
     }
 
-    fn read_constant(&mut self) -> Value {
+    fn read_constant(&mut self) -> &Value {
         let byte = self.read_byte();
-        self.chunk.constants[byte as usize]
+        &self.chunk.constants[byte as usize]
     }
 
     fn reset_stack(&mut self) {
@@ -99,10 +114,44 @@ impl Vm {
         println!();
     }
 
-    fn binary_op(&mut self, op: impl Fn(f64, f64) -> f64) {
+    fn numeric_binary_op(&mut self, op: impl Fn(f64, f64) -> f64) -> Result<(), VmError> {
+        match (self.stack.pop().unwrap(), self.stack.pop().unwrap()) {
+            (Value::Number(b), Value::Number(a)) => {
+                self.stack.push(Value::Number(op(a, b)));
+                Ok(())
+            }
+            _ => {
+                self.runtime_error("Operands must be numbers.");
+                Err(VmError::RuntimeError)
+            }
+        }
+    }
+
+    fn comparison_binary_op(&mut self, ordering: Ordering) -> Result<(), VmError> {
         let b = self.stack.pop().unwrap();
         let a = self.stack.pop().unwrap();
-        self.stack.push(op(a, b));
+
+        match a.partial_cmp(&b) {
+            Some(o) => {
+                self.stack.push(Value::Bool(o == ordering));
+                Ok(())
+            }
+            None => {
+                self.runtime_error("Operands must be numbers.");
+                Err(VmError::RuntimeError)
+            }
+        }
+    }
+
+    fn peek(&self, distance: usize) -> &Value {
+        self.stack.get(self.stack.len() - 1 - distance).unwrap()
+    }
+
+    fn runtime_error(&self, message: impl AsRef<str>) {
+        eprintln!("{}", message.as_ref());
+
+        let line = self.chunk.lines[self.ip - 1];
+        eprintln!("[line {line}] in script");
     }
 }
 
