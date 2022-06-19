@@ -7,6 +7,7 @@ use fnv::FnvHashSet;
 
 use crate::chunk::Chunk;
 use crate::chunk::OpCode;
+use crate::object::Object;
 use crate::string::LoxString;
 use crate::value::{print_value, Value};
 
@@ -62,17 +63,18 @@ impl Vm {
                 },
                 OpCode::Add => match (self.stack.pop().unwrap(), self.stack.pop().unwrap()) {
                     (Value::Number(b), Value::Number(a)) => self.stack.push(Value::Number(a + b)),
-                    (Value::Obj(b), Value::Obj(mut a)) => {
-                        // This reuses `a`'s buffer so we don't need to save the result
-                        match a.as_mut().add(b.as_ref()) {
-                            Err(()) => {
+                    (Value::Obj(b), Value::Obj(a)) => {
+                        match (b.as_ref(), a.as_ref()) {
+                            (Object::Str(b), Object::Str(a)) => self.concatenate(a, b),
+                            _ => {
+                                // Two objects but at least one wasn't a string
                                 self.runtime_error("Operands must be two numbers or two strings.");
                                 return Err(VmError::RuntimeError);
                             }
-                            Ok(_a) => self.stack.push(Value::Obj(a)),
-                        }
+                        };
                     }
                     _ => {
+                        // At least one value wasn't a number nor a string
                         self.runtime_error("Operands must be two numbers or two strings.");
                         return Err(VmError::RuntimeError);
                     }
@@ -154,6 +156,12 @@ impl Vm {
 
     fn peek(&self, distance: usize) -> &Value {
         self.stack.get(self.stack.len() - 1 - distance).unwrap()
+    }
+
+    fn concatenate(&mut self, a: &LoxString, b: &LoxString) {
+        let new_object = Object::Str(LoxString::add(self, a, b));
+        let new_value = Value::Obj(Box::new(new_object));
+        self.stack.push(new_value);
     }
 
     pub fn intern_string(&mut self, string: &LoxString) {

@@ -3,6 +3,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use crate::chunk::{Chunk, OpCode};
 use crate::object::Object;
 use crate::scanner::Scanner;
+use crate::string::LoxString;
 use crate::token::{Token, TokenType};
 use crate::value::Value;
 use crate::vm::Vm;
@@ -285,7 +286,7 @@ fn literal(compiler: &mut Compiler) {
 fn string(compiler: &mut Compiler) {
     let lexeme = compiler.previous.unwrap().lexeme;
     let lexeme = &lexeme[1..lexeme.len() - 1];
-    let object = Object::new_string(compiler.vm, lexeme);
+    let object = Object::Str(LoxString::copy_string(compiler.vm, lexeme));
     let value = Value::Obj(Box::new(object));
 
     compiler.emit_constant(value);
