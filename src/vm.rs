@@ -1,9 +1,10 @@
 use std::cmp::Ordering;
 use std::error::Error;
 use std::fmt::Display;
-use std::ops::{Add, Div, Mul, Not, Sub};
+use std::ops::{Div, Mul, Not, Sub};
+use std::rc::Rc;
 
-use fnv::FnvHashSet;
+use fnv::FnvHashMap;
 
 use crate::chunk::Chunk;
 use crate::chunk::OpCode;
@@ -16,7 +17,7 @@ pub struct Vm {
     chunk: Chunk, // reference?
     ip: usize,
     stack: Vec<Value>,
-    strings: FnvHashSet<LoxString>,
+    strings: FnvHashMap<Rc<String>, LoxString>,
 }
 
 impl Vm {
@@ -164,10 +165,13 @@ impl Vm {
         self.stack.push(new_value);
     }
 
-    pub fn intern_string(&mut self, string: &LoxString) {
-        if !self.strings.contains(string) {
-            self.strings.insert(string.clone());
-        }
+    pub fn intern_string(&mut self, string: String) -> LoxString {
+        let string = Rc::new(string);
+
+        self.strings
+            .entry(string.clone())
+            .or_insert_with(|| LoxString::from(string))
+            .clone()
     }
 
     fn runtime_error(&self, message: impl AsRef<str>) {
