@@ -1,4 +1,5 @@
 use fnv::FnvHasher;
+use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
@@ -32,6 +33,12 @@ impl From<Rc<String>> for LoxString {
 impl Hash for LoxString {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.hash.hash(state);
+    }
+}
+
+impl Display for LoxString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\"{}\"", *self.string)
     }
 }
 
