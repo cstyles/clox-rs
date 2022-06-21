@@ -35,12 +35,10 @@ fn repl(mut vm: Vm) {
 
     while stdin.read_line(&mut buffer).is_ok() {
         let source = buffer.trim();
-        let chunk = match Compiler::compile(&mut vm, source) {
-            Err(_) => continue,
-            Ok(chunk) => chunk,
-        };
+        if let Ok(chunk) = Compiler::compile(&mut vm, source) {
+            vm.interpret(chunk);
+        }
 
-        vm.interpret(chunk);
         buffer.clear();
         print_prompt();
     }
