@@ -17,6 +17,8 @@ pub enum OpCode {
     Equal,
     Greater,
     Less,
+    Print,
+    Pop,
 }
 
 impl From<u8> for OpCode {
@@ -38,6 +40,8 @@ impl From<u8> for OpCode {
             11 => Equal,
             12 => Greater,
             13 => Less,
+            14 => Print,
+            15 => Pop,
             _ => panic!("Unknown opcode: {byte}"),
         }
     }
@@ -60,6 +64,8 @@ impl OpCode {
             OpCode::Equal => "OP_EQUAL",
             OpCode::Greater => "OP_GREATER",
             OpCode::Less => "OP_LESS",
+            OpCode::Print => "OP_PRINT",
+            OpCode::Pop => "OP_POP",
         }
     }
 }

@@ -46,9 +46,6 @@ impl Vm {
 
             match instruction {
                 OpCode::Return => {
-                    let value = self.stack.pop().unwrap();
-                    print_value(&value);
-                    println!();
                     return Ok(());
                 }
                 OpCode::Constant => {
@@ -97,6 +94,13 @@ impl Vm {
                 }
                 OpCode::Greater => self.comparison_binary_op(Ordering::Greater)?,
                 OpCode::Less => self.comparison_binary_op(Ordering::Less)?,
+                OpCode::Print => {
+                    print_value(&self.stack.pop().unwrap());
+                    println!();
+                }
+                OpCode::Pop => {
+                    self.stack.pop().unwrap();
+                }
             }
         }
     }

@@ -39,8 +39,9 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         let mut compiler = Self::new(vm, source);
 
         compiler.advance();
-        compiler.expression();
-        compiler.consume(TokenType::Eof, "Expect end of expression.");
+        while !compiler.match_(TokenType::Eof) {
+            compiler.declaration();
+        }
 
         compiler.end_compiler();
 
@@ -103,6 +104,25 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         }
     }
 
+    fn check(&mut self, token_type: TokenType) -> bool {
+        self.current
+            .map_or(false, |token| token.token_type == token_type)
+    }
+
+    fn check_previous(&mut self, token_type: TokenType) -> bool {
+        self.previous
+            .map_or(false, |token| token.token_type == token_type)
+    }
+
+    fn match_(&mut self, token_type: TokenType) -> bool {
+        if self.check(token_type) {
+            self.advance();
+            true
+        } else {
+            false
+        }
+    }
+
     fn current_chunk(&self) -> &Chunk {
         &self.compiling_chunk
     }
@@ -154,6 +174,53 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
 
     fn expression(&mut self) {
         self.parse_precedence(Precedence::Assignment);
+    }
+
+    fn declaration(&mut self) {
+        self.statement();
+
+        if self.panic_mode {
+            self.synchronize();
+        }
+    }
+
+    fn statement(&mut self) {
+        if self.match_(TokenType::Print) {
+            self.print_statement();
+        } else {
+            self.expression_statement();
+        }
+    }
+
+    fn print_statement(&mut self) {
+        self.expression();
+        self.consume(TokenType::Semicolon, "Expect ';' after value.");
+        self.emit_opcode(OpCode::Print);
+    }
+
+    fn expression_statement(&mut self) {
+        self.expression();
+        self.consume(TokenType::Semicolon, "Expect ';' after value.");
+        self.emit_opcode(OpCode::Pop);
+    }
+
+    fn synchronize(&mut self) {
+        self.panic_mode = false;
+
+        while !self.check(TokenType::Eof) {
+            if self.check_previous(TokenType::Semicolon) {
+                return;
+            }
+
+            use TokenType::*;
+            if let Some(Class | Fun | Var | For | If | While | Print | Return) =
+                self.current.map(|token| token.token_type)
+            {
+                return;
+            }
+        }
+
+        self.advance();
     }
 
     fn parse_precedence(&mut self, precedence: Precedence) {
