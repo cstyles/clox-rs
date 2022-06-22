@@ -107,6 +107,16 @@ impl Vm {
                     let value = self.pop();
                     self.globals.insert(name, value);
                 }
+                OpCode::GetGlobal => {
+                    let name = self.read_string().string();
+                    match self.globals.get(&name) {
+                        Some(value) => self.stack.push(value.clone()),
+                        None => {
+                            self.runtime_error(format!("Undefined variable '{}'.", *name));
+                            return Err(VmError::RuntimeError);
+                        }
+                    }
+                }
             }
         }
     }

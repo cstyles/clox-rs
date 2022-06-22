@@ -287,6 +287,12 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         self.emit_byte(global);
     }
 
+    fn named_variable(&mut self) {
+        let arg = self.identifier_constant(&self.previous.unwrap());
+        self.emit_opcode(OpCode::GetGlobal);
+        self.emit_byte(arg);
+    }
+
     fn make_constant(&mut self, value: Value) -> u8 {
         let constant = self.current_chunk_mut().add_constant(value);
         if constant > u8::MAX as usize {
@@ -394,6 +400,10 @@ fn string(compiler: &mut Compiler) {
     let value = Value::Obj(Box::new(object));
 
     compiler.emit_constant(value);
+}
+
+fn variable(compiler: &mut Compiler) {
+    compiler.named_variable();
 }
 
 static RULE_TABLE: [ParseRule; 40] = [
@@ -513,7 +523,7 @@ static RULE_TABLE: [ParseRule; 40] = [
     },
     // Identifier
     ParseRule {
-        prefix: None,
+        prefix: Some(variable),
         infix: None,
         precedence: Precedence::None,
     },
