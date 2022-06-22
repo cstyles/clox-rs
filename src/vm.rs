@@ -60,7 +60,7 @@ impl Vm {
                         return Err(VmError::RuntimeError);
                     }
                 },
-                OpCode::Add => match (self.stack.pop().unwrap(), self.stack.pop().unwrap()) {
+                OpCode::Add => match (self.pop(), self.pop()) {
                     (Value::Number(b), Value::Number(a)) => self.stack.push(Value::Number(a + b)),
                     (Value::Obj(b), Value::Obj(a)) => {
                         match (b.as_ref(), a.as_ref()) {
@@ -89,22 +89,23 @@ impl Vm {
                     *top = top.not();
                 }
                 OpCode::Equal => {
-                    let b = self.stack.pop().unwrap();
-                    let a = self.stack.pop().unwrap();
+                    let b = self.pop();
+                    let a = self.pop();
                     self.stack.push(Value::Bool(a == b));
                 }
                 OpCode::Greater => self.comparison_binary_op(Ordering::Greater)?,
                 OpCode::Less => self.comparison_binary_op(Ordering::Less)?,
                 OpCode::Print => {
-                    print_value(&self.stack.pop().unwrap());
+                    print_value(&self.pop());
                     println!();
                 }
                 OpCode::Pop => {
-                    self.stack.pop().unwrap();
+                    self.pop();
                 }
                 OpCode::DefineGlobal => {
                     let name = self.read_string().string();
-                    self.globals.insert(name, self.stack.pop().unwrap());
+                    let value = self.pop();
+                    self.globals.insert(name, value);
                 }
             }
         }
@@ -140,7 +141,7 @@ impl Vm {
     }
 
     fn numeric_binary_op(&mut self, op: impl Fn(f64, f64) -> f64) -> Result<(), VmError> {
-        match (self.stack.pop().unwrap(), self.stack.pop().unwrap()) {
+        match (self.pop(), self.pop()) {
             (Value::Number(b), Value::Number(a)) => {
                 self.stack.push(Value::Number(op(a, b)));
                 Ok(())
@@ -153,8 +154,8 @@ impl Vm {
     }
 
     fn comparison_binary_op(&mut self, ordering: Ordering) -> Result<(), VmError> {
-        let b = self.stack.pop().unwrap();
-        let a = self.stack.pop().unwrap();
+        let b = self.pop();
+        let a = self.pop();
 
         match a.partial_cmp(&b) {
             Some(o) => {
@@ -166,6 +167,10 @@ impl Vm {
                 Err(VmError::RuntimeError)
             }
         }
+    }
+
+    fn pop(&mut self) -> Value {
+        self.stack.pop().unwrap()
     }
 
     fn peek(&self, distance: usize) -> &Value {
