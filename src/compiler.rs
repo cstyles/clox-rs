@@ -177,7 +177,11 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
     }
 
     fn declaration(&mut self) {
-        self.statement();
+        if self.match_(TokenType::Var) {
+            self.variable_declaration();
+        } else {
+            self.statement();
+        }
 
         if self.panic_mode {
             self.synchronize();
@@ -202,6 +206,23 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         self.expression();
         self.consume(TokenType::Semicolon, "Expect ';' after value.");
         self.emit_opcode(OpCode::Pop);
+    }
+
+    fn variable_declaration(&mut self) {
+        let global = self.parse_variable("Expect variable name.");
+
+        if self.match_(TokenType::Equal) {
+            self.expression();
+        } else {
+            self.emit_opcode(OpCode::Nil);
+        }
+
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration.",
+        );
+
+        self.define_variable(global);
     }
 
     fn synchronize(&mut self) {
@@ -248,6 +269,22 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
                 f(self);
             }
         }
+    }
+
+    fn parse_variable(&mut self, error_message: &str) -> u8 {
+        self.consume(TokenType::Identifier, error_message);
+        self.identifier_constant(&self.previous.unwrap())
+    }
+
+    fn identifier_constant(&mut self, name: &Token) -> u8 {
+        let object = Object::Str(LoxString::copy_string(self.vm, name.lexeme));
+        let value = Value::Obj(Box::new(object));
+        self.make_constant(value)
+    }
+
+    fn define_variable(&mut self, global: u8) {
+        self.emit_opcode(OpCode::DefineGlobal);
+        self.emit_byte(global);
     }
 
     fn make_constant(&mut self, value: Value) -> u8 {

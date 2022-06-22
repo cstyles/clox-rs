@@ -58,4 +58,8 @@ impl LoxString {
         let new_string = format!("{}{}", a.string, b.string);
         Self::take_string(vm, new_string)
     }
+
+    pub fn string(&self) -> Rc<String> {
+        self.string.clone()
+    }
 }

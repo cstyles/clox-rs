@@ -19,6 +19,7 @@ pub enum OpCode {
     Less,
     Print,
     Pop,
+    DefineGlobal,
 }
 
 impl From<u8> for OpCode {
@@ -42,6 +43,7 @@ impl From<u8> for OpCode {
             13 => Less,
             14 => Print,
             15 => Pop,
+            16 => DefineGlobal,
             _ => panic!("Unknown opcode: {byte}"),
         }
     }
@@ -66,6 +68,7 @@ impl OpCode {
             OpCode::Less => "OP_LESS",
             OpCode::Print => "OP_PRINT",
             OpCode::Pop => "OP_POP",
+            OpCode::DefineGlobal => "OP_DEFINE_GLOBAL",
         }
     }
 }

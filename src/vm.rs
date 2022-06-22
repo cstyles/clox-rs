@@ -18,6 +18,7 @@ pub struct Vm {
     ip: usize,
     stack: Vec<Value>,
     strings: FnvHashMap<Rc<String>, LoxString>,
+    globals: FnvHashMap<Rc<String>, Value>,
 }
 
 impl Vm {
@@ -101,6 +102,10 @@ impl Vm {
                 OpCode::Pop => {
                     self.stack.pop().unwrap();
                 }
+                OpCode::DefineGlobal => {
+                    let name = self.read_string().string();
+                    self.globals.insert(name, self.stack.pop().unwrap());
+                }
             }
         }
     }
@@ -114,6 +119,16 @@ impl Vm {
     fn read_constant(&mut self) -> &Value {
         let byte = self.read_byte();
         &self.chunk.constants[byte as usize]
+    }
+
+    fn read_string(&mut self) -> &LoxString {
+        if let Value::Obj(obj) = self.read_constant() {
+            if let Object::Str(lox_string) = obj.as_ref() {
+                return lox_string;
+            }
+        }
+
+        unreachable!("Constant wasn't a string.");
     }
 
     fn reset_stack(&mut self) {
