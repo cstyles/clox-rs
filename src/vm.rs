@@ -122,6 +122,7 @@ impl Vm {
                     let value = self.peek(0).clone();
                     if self.globals.insert(name.clone(), value).is_none() {
                         self.globals.remove(&name);
+                        self.pop();
                         self.runtime_error(format!("Undefined variable '{}'.", name));
                         return Err(VmError::RuntimeError);
                     }
