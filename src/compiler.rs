@@ -258,10 +258,10 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
             }
         }
 
-        while (precedence as u8)
+        while (precedence)
             <= self
                 .get_parse_rule(self.current.unwrap().token_type)
-                .precedence as u8
+                .precedence
         {
             self.advance();
             let infix_rule = self.get_parse_rule(self.previous.unwrap().token_type).infix;
@@ -308,7 +308,7 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
     }
 }
 
-#[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive)]
+#[derive(Debug, Copy, Clone, IntoPrimitive, TryFromPrimitive, PartialOrd, PartialEq, Ord, Eq)]
 #[repr(u8)]
 enum Precedence {
     None = 0,
