@@ -14,3 +14,13 @@ impl Display for Object {
         }
     }
 }
+
+impl Object {
+    pub fn as_string(&self) -> &LoxString {
+        if let Object::Str(string) = self {
+            string
+        } else {
+            panic!("Object wasn't a string.");
+        }
+    }
+}

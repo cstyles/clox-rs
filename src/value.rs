@@ -2,6 +2,7 @@ use std::cmp::{PartialEq, PartialOrd};
 use std::fmt::Display;
 
 use crate::object::Object;
+use crate::string::LoxString;
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -58,6 +59,20 @@ impl Value {
             Value::Number(_) => false,
             Value::Obj(_) => false,
         }
+    }
+
+    // Assumes that the Value contains an Object and returns
+    // a reference to that Object (outside of its box).
+    pub fn as_object(&self) -> &Object {
+        if let Value::Obj(obj) = self {
+            obj.as_ref()
+        } else {
+            panic!("Value wasn't an Object.");
+        }
+    }
+
+    pub fn as_string(&self) -> &LoxString {
+        self.as_object().as_string()
     }
 }
 

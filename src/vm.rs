@@ -122,13 +122,7 @@ impl Vm {
     }
 
     fn read_string(&mut self) -> &LoxString {
-        if let Value::Obj(obj) = self.read_constant() {
-            if let Object::Str(lox_string) = obj.as_ref() {
-                return lox_string;
-            }
-        }
-
-        unreachable!("Constant wasn't a string.");
+        self.read_constant().as_string()
     }
 
     fn reset_stack(&mut self) {
