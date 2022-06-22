@@ -24,7 +24,7 @@ impl Chunk {
 
         let instruction: &OpCode = &self.code[offset].into();
         match instruction {
-            Constant | DefineGlobal | GetGlobal => {
+            Constant | DefineGlobal | GetGlobal | SetGlobal => {
                 self.constant_instruction(instruction.name(), offset)
             }
             Return | Less | Greater | Equal | Not | False | True | Nil | Divide | Multiply

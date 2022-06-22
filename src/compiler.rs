@@ -250,13 +250,17 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
             .get_parse_rule(self.previous.unwrap().token_type)
             .prefix;
 
-        match prefix_rule {
-            Some(prefix_func) => prefix_func(self),
+        let can_assign = match prefix_rule {
+            Some(prefix_func) => {
+                let can_assign = precedence <= Precedence::Assignment;
+                prefix_func(self, can_assign);
+                can_assign
+            }
             None => {
                 self.error("Expect expression.");
                 return;
             }
-        }
+        };
 
         while (precedence)
             <= self
@@ -265,9 +269,13 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         {
             self.advance();
             let infix_rule = self.get_parse_rule(self.previous.unwrap().token_type).infix;
-            if let Some(f) = infix_rule {
-                f(self);
+            if let Some(infix_func) = infix_rule {
+                infix_func(self, can_assign);
             }
+        }
+
+        if can_assign && self.match_(TokenType::Equal) {
+            self.error("Invalid assignment target.");
         }
     }
 
@@ -287,10 +295,17 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         self.emit_byte(global);
     }
 
-    fn named_variable(&mut self) {
-        let arg = self.identifier_constant(&self.previous.unwrap());
-        self.emit_opcode(OpCode::GetGlobal);
-        self.emit_byte(arg);
+    fn named_variable(&mut self, name: Token, can_assign: bool) {
+        let arg = self.identifier_constant(&name);
+
+        if can_assign && self.match_(TokenType::Equal) {
+            self.expression();
+            self.emit_opcode(OpCode::SetGlobal);
+            self.emit_byte(arg);
+        } else {
+            self.emit_opcode(OpCode::GetGlobal);
+            self.emit_byte(arg);
+        }
     }
 
     fn make_constant(&mut self, value: Value) -> u8 {
@@ -338,14 +353,14 @@ struct ParseRule {
     precedence: Precedence,
 }
 
-type ParseFn = fn(compiler: &mut Compiler<'_, '_>) -> ();
+type ParseFn = fn(compiler: &mut Compiler<'_, '_>, can_assign: bool) -> ();
 
-fn grouping(compiler: &mut Compiler) {
+fn grouping(compiler: &mut Compiler, _can_assign: bool) {
     compiler.expression();
     compiler.consume(TokenType::RightParen, "Expect ')' after expression.");
 }
 
-fn binary(compiler: &mut Compiler) {
+fn binary(compiler: &mut Compiler, _can_assign: bool) {
     let operator_type = compiler.previous.unwrap().token_type;
     let parse_rule = compiler.get_parse_rule(operator_type);
     let precedence = parse_rule.precedence.higher();
@@ -366,7 +381,7 @@ fn binary(compiler: &mut Compiler) {
     }
 }
 
-fn unary(compiler: &mut Compiler) {
+fn unary(compiler: &mut Compiler, _can_assign: bool) {
     let operator_type = compiler.previous.unwrap().token_type;
 
     // Compile the expression
@@ -379,12 +394,12 @@ fn unary(compiler: &mut Compiler) {
     }
 }
 
-fn number(compiler: &mut Compiler) {
+fn number(compiler: &mut Compiler, _can_assign: bool) {
     let value: f64 = compiler.previous.unwrap().lexeme.parse().unwrap();
     compiler.emit_constant(Value::Number(value));
 }
 
-fn literal(compiler: &mut Compiler) {
+fn literal(compiler: &mut Compiler, _can_assign: bool) {
     match compiler.previous.unwrap().token_type {
         TokenType::False => compiler.emit_opcode(OpCode::False),
         TokenType::Nil => compiler.emit_opcode(OpCode::Nil),
@@ -393,7 +408,7 @@ fn literal(compiler: &mut Compiler) {
     }
 }
 
-fn string(compiler: &mut Compiler) {
+fn string(compiler: &mut Compiler, _can_assign: bool) {
     let lexeme = compiler.previous.unwrap().lexeme;
     let lexeme = &lexeme[1..lexeme.len() - 1];
     let object = Object::Str(LoxString::copy_string(compiler.vm, lexeme));
@@ -402,8 +417,8 @@ fn string(compiler: &mut Compiler) {
     compiler.emit_constant(value);
 }
 
-fn variable(compiler: &mut Compiler) {
-    compiler.named_variable();
+fn variable(compiler: &mut Compiler, can_assign: bool) {
+    compiler.named_variable(compiler.previous.unwrap(), can_assign);
 }
 
 static RULE_TABLE: [ParseRule; 40] = [

@@ -21,6 +21,7 @@ pub enum OpCode {
     Pop,
     DefineGlobal,
     GetGlobal,
+    SetGlobal,
 }
 
 impl From<u8> for OpCode {
@@ -46,6 +47,7 @@ impl From<u8> for OpCode {
             15 => Pop,
             16 => DefineGlobal,
             17 => GetGlobal,
+            18 => SetGlobal,
             _ => panic!("Unknown opcode: {byte}"),
         }
     }
@@ -72,6 +74,7 @@ impl OpCode {
             OpCode::Pop => "OP_POP",
             OpCode::DefineGlobal => "OP_DEFINE_GLOBAL",
             OpCode::GetGlobal => "OP_GET_GLOBAL",
+            OpCode::SetGlobal => "OP_SET_GLOBAL",
         }
     }
 }

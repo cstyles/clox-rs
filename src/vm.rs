@@ -117,6 +117,15 @@ impl Vm {
                         }
                     }
                 }
+                OpCode::SetGlobal => {
+                    let name = self.read_string().string();
+                    let value = self.peek(0).clone();
+                    if self.globals.insert(name.clone(), value).is_none() {
+                        self.globals.remove(&name);
+                        self.runtime_error(format!("Undefined variable '{}'.", name));
+                        return Err(VmError::RuntimeError);
+                    }
+                }
             }
         }
     }
