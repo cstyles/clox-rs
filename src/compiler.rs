@@ -362,12 +362,12 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
     fn named_variable(&mut self, name: Token, can_assign: bool) {
         let arg = self.locals.resolve_local(name);
         let (arg, get_op, set_op) = match arg {
-            Err(_) => {
+            Err(ResolveLocalError::Uninitialized) => {
                 self.error("Can't read local variable in its own initializer.");
                 return;
             }
-            Ok(Some(arg)) => (arg, OpCode::GetLocal, OpCode::SetLocal),
-            Ok(None) => (
+            Ok(arg) => (arg, OpCode::GetLocal, OpCode::SetLocal),
+            Err(ResolveLocalError::NotFound) => (
                 self.identifier_constant(&name),
                 OpCode::GetGlobal,
                 OpCode::SetGlobal,
@@ -472,27 +472,30 @@ impl<'src> Locals<'src> {
         false
     }
 
-    // TODO: Create new enum like ResolveResult or something with variants
-    // for local, global, and error
-    fn resolve_local(&self, name: Token<'src>) -> Result<Option<u8>, ()> {
+    fn resolve_local(&self, name: Token<'src>) -> Result<u8, ResolveLocalError> {
         for (i, local) in self.locals.iter().enumerate().rev() {
             if local.name.identifiers_equal(&name) {
                 if local.depth.is_none() {
                     // We're trying to resolve a variable before it's initialized
                     // (e.g., inside its own initializer).
-                    return Err(());
+                    return Err(ResolveLocalError::Uninitialized);
                 } else {
-                    return Ok(Some(i as u8));
+                    return Ok(i as u8);
                 }
             }
         }
 
-        Ok(None)
+        Err(ResolveLocalError::NotFound)
     }
 
     fn mark_initialized(&mut self) {
         self.locals.last_mut().unwrap().depth = Some(self.scope_depth);
     }
+}
+
+enum ResolveLocalError {
+    Uninitialized,
+    NotFound,
 }
 
 #[derive(Debug)]
