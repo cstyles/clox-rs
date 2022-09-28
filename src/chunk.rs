@@ -1,56 +1,29 @@
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+
 use crate::value::{Value, ValueArray};
 
-#[derive(Debug)]
+#[derive(Debug, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
 pub enum OpCode {
-    Return,
-    Constant,
-    Negate,
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Nil,
-    True,
-    False,
-    Not,
-    Equal,
-    Greater,
-    Less,
-    Print,
-    Pop,
-    DefineGlobal,
-    GetGlobal,
-    SetGlobal,
-}
-
-impl From<u8> for OpCode {
-    fn from(byte: u8) -> Self {
-        use OpCode::*;
-
-        match byte {
-            0 => Return,
-            1 => Constant,
-            2 => Negate,
-            3 => Add,
-            4 => Subtract,
-            5 => Multiply,
-            6 => Divide,
-            7 => Nil,
-            8 => True,
-            9 => False,
-            10 => Not,
-            11 => Equal,
-            12 => Greater,
-            13 => Less,
-            14 => Print,
-            15 => Pop,
-            16 => DefineGlobal,
-            17 => GetGlobal,
-            18 => SetGlobal,
-            _ => panic!("Unknown opcode: {byte}"),
-        }
-    }
+    Return = 0,
+    Constant = 1,
+    Negate = 2,
+    Add = 3,
+    Subtract = 4,
+    Multiply = 5,
+    Divide = 6,
+    Nil = 7,
+    True = 8,
+    False = 9,
+    Not = 10,
+    Equal = 11,
+    Greater = 12,
+    Less = 13,
+    Print = 14,
+    Pop = 15,
+    DefineGlobal = 16,
+    GetGlobal = 17,
+    SetGlobal = 18,
 }
 
 impl OpCode {
@@ -97,7 +70,7 @@ impl Chunk {
     }
 
     pub fn write_opcode(&mut self, chunk: OpCode, line: usize) {
-        self.write_byte(chunk as u8, line);
+        self.write_byte(chunk.into(), line);
     }
 
     pub fn add_constant(&mut self, constant: Value) -> usize {

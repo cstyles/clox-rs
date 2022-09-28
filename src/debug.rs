@@ -22,7 +22,7 @@ impl Chunk {
             print!("{:4} ", self.lines[offset]);
         }
 
-        let instruction: &OpCode = &self.code[offset].into();
+        let instruction: &OpCode = &self.code[offset].try_into().unwrap();
         match instruction {
             Constant | DefineGlobal | GetGlobal | SetGlobal => {
                 self.constant_instruction(instruction.name(), offset)

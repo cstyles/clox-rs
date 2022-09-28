@@ -43,7 +43,7 @@ impl Vm {
                 self.debug_trace_execution();
             }
 
-            let instruction: OpCode = self.read_byte().into();
+            let instruction: OpCode = self.read_byte().try_into().unwrap();
 
             match instruction {
                 OpCode::Return => {
