@@ -17,6 +17,7 @@ pub struct Compiler<'src, 'vm> {
     had_error: bool,
     panic_mode: bool,
     compiling_chunk: Chunk,
+    locals: Locals<'src>,
 }
 
 impl<'src, 'vm> Compiler<'src, 'vm> {
@@ -32,6 +33,7 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
             had_error: false,
             panic_mode: false,
             compiling_chunk: chunk,
+            locals: Locals::new(),
         }
     }
 
@@ -136,11 +138,6 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         self.current_chunk_mut().write_byte(byte, line);
     }
 
-    fn emit_bytes(&mut self, byte1: u8, byte2: u8) {
-        self.emit_byte(byte1);
-        self.emit_byte(byte2);
-    }
-
     fn emit_opcode(&mut self, opcode: OpCode) {
         let line = self.previous.unwrap().line;
         self.current_chunk_mut().write_opcode(opcode, line);
@@ -191,6 +188,10 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
     fn statement(&mut self) {
         if self.match_(TokenType::Print) {
             self.print_statement();
+        } else if self.match_(TokenType::LeftBrace) {
+            self.begin_scope();
+            self.block();
+            self.end_scope();
         } else {
             self.expression_statement();
         }
@@ -200,6 +201,36 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         self.expression();
         self.consume(TokenType::Semicolon, "Expect ';' after value.");
         self.emit_opcode(OpCode::Print);
+    }
+
+    fn begin_scope(&mut self) {
+        self.locals.scope_depth += 1;
+    }
+
+    fn block(&mut self) {
+        while !self.check(TokenType::RightBrace) && !self.check(TokenType::Eof) {
+            self.declaration();
+        }
+
+        self.consume(TokenType::RightBrace, "Expect '}' after block.");
+    }
+
+    fn end_scope(&mut self) {
+        self.locals.scope_depth -= 1;
+
+        // Clean up any local variables in the current scope
+        while let Some(local) = self.locals.locals.last() {
+            // Stop if we encounter a parent scope
+            if local
+                .depth
+                .map_or(true, |depth| depth < self.locals.scope_depth)
+            {
+                break;
+            }
+
+            self.emit_opcode(OpCode::Pop);
+            self.locals.locals.pop();
+        }
     }
 
     fn expression_statement(&mut self) {
@@ -281,6 +312,14 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
 
     fn parse_variable(&mut self, error_message: &str) -> u8 {
         self.consume(TokenType::Identifier, error_message);
+        self.declare_variable();
+
+        // We don't look up local variables by name at runtime so we
+        // don't need to add the variable's name to the constant table
+        if self.locals.scope_depth > 0 {
+            return 0;
+        }
+
         self.identifier_constant(&self.previous.unwrap())
     }
 
@@ -290,20 +329,57 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         self.make_constant(value)
     }
 
+    fn declare_variable(&mut self) {
+        // We only declare local variables so exit early if we're in the global scope
+        if self.locals.scope_depth == 0 {
+            return;
+        }
+
+        // We just consumed the identifier so this is safe
+        let name = self.previous.unwrap();
+
+        if self.locals.contains_in_current_scope(name) {
+            self.error("Already a variable with this name in this scope.");
+        }
+
+        if self.locals.add(name).is_err() {
+            self.error("Too many local variables in function.");
+        }
+    }
+
     fn define_variable(&mut self, global: u8) {
+        // We don't need to create a local variable at runtime because
+        // its value is already on top of the stack.
+        if self.locals.scope_depth > 0 {
+            self.locals.mark_initialized();
+            return;
+        }
+
         self.emit_opcode(OpCode::DefineGlobal);
         self.emit_byte(global);
     }
 
     fn named_variable(&mut self, name: Token, can_assign: bool) {
-        let arg = self.identifier_constant(&name);
+        let arg = self.locals.resolve_local(name);
+        let (arg, get_op, set_op) = match arg {
+            Err(_) => {
+                self.error("Can't read local variable in its own initializer.");
+                return;
+            }
+            Ok(Some(arg)) => (arg, OpCode::GetLocal, OpCode::SetLocal),
+            Ok(None) => (
+                self.identifier_constant(&name),
+                OpCode::GetGlobal,
+                OpCode::SetGlobal,
+            ),
+        };
 
         if can_assign && self.match_(TokenType::Equal) {
             self.expression();
-            self.emit_opcode(OpCode::SetGlobal);
+            self.emit_opcode(set_op);
             self.emit_byte(arg);
         } else {
-            self.emit_opcode(OpCode::GetGlobal);
+            self.emit_opcode(get_op);
             self.emit_byte(arg);
         }
     }
@@ -354,6 +430,82 @@ struct ParseRule {
 }
 
 type ParseFn = fn(compiler: &mut Compiler<'_, '_>, can_assign: bool) -> ();
+
+const UINT8_COUNT: usize = u8::MAX as usize + 1;
+
+#[derive(Debug)]
+struct Locals<'src> {
+    locals: Vec<Local<'src>>,
+    scope_depth: usize,
+}
+
+impl<'src> Locals<'src> {
+    fn new() -> Self {
+        Self {
+            locals: Vec::with_capacity(UINT8_COUNT),
+            scope_depth: 0,
+        }
+    }
+
+    fn add(&mut self, name: Token<'src>) -> Result<(), ()> {
+        // Check if we already have the maximum number of local variables
+        if self.locals.len() == UINT8_COUNT {
+            return Err(());
+        }
+
+        let local = Local::new(name);
+        self.locals.push(local);
+        Ok(())
+    }
+
+    fn contains_in_current_scope(&self, name: Token<'src>) -> bool {
+        for local in self.locals.iter().rev() {
+            if local.depth.map_or(false, |depth| depth < self.scope_depth) {
+                break;
+            }
+
+            if local.name.identifiers_equal(&name) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    // TODO: Create new enum like ResolveResult or something with variants
+    // for local, global, and error
+    fn resolve_local(&self, name: Token<'src>) -> Result<Option<u8>, ()> {
+        for (i, local) in self.locals.iter().enumerate().rev() {
+            if local.name.identifiers_equal(&name) {
+                if local.depth.is_none() {
+                    // We're trying to resolve a variable before it's initialized
+                    // (e.g., inside its own initializer).
+                    return Err(());
+                } else {
+                    return Ok(Some(i as u8));
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn mark_initialized(&mut self) {
+        self.locals.last_mut().unwrap().depth = Some(self.scope_depth);
+    }
+}
+
+#[derive(Debug)]
+struct Local<'src> {
+    name: Token<'src>,
+    depth: Option<usize>,
+}
+
+impl<'src> Local<'src> {
+    fn new(name: Token<'src>) -> Self {
+        Self { name, depth: None }
+    }
+}
 
 fn grouping(compiler: &mut Compiler, _can_assign: bool) {
     compiler.expression();

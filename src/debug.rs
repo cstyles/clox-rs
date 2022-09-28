@@ -31,6 +31,7 @@ impl Chunk {
             | Subtract | Add | Negate | Print | Pop => {
                 self.simple_instruction(instruction.name(), offset)
             }
+            GetLocal | SetLocal => self.byte_instruction(instruction.name(), offset),
         }
     }
 
@@ -46,6 +47,12 @@ impl Chunk {
         value::print_value(&self.constants[constant as usize]);
         println!();
 
+        offset + 2
+    }
+
+    fn byte_instruction(&self, name: &str, offset: usize) -> usize {
+        let slot = self.code[offset + 1];
+        println!("{:-16} {:4} ", name, slot);
         offset + 2
     }
 }

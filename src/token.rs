@@ -5,6 +5,12 @@ pub struct Token<'src> {
     pub line: usize,
 }
 
+impl<'src> Token<'src> {
+    pub fn identifiers_equal(&self, other: &Self) -> bool {
+        self.lexeme == other.lexeme
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(unused)]
 pub enum TokenType {

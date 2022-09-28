@@ -127,6 +127,16 @@ impl Vm {
                         return Err(VmError::RuntimeError);
                     }
                 }
+                OpCode::GetLocal => {
+                    let slot = self.read_byte();
+                    let value = self.stack[slot as usize].clone();
+                    self.stack.push(value);
+                }
+                OpCode::SetLocal => {
+                    let slot = self.read_byte();
+                    let value = self.peek(0).clone();
+                    self.stack[slot as usize] = value;
+                }
             }
         }
     }
