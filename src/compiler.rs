@@ -148,6 +148,16 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         self.emit_opcode(opcode2);
     }
 
+    fn emit_jump(&mut self, opcode: OpCode) -> usize {
+        self.emit_opcode(opcode);
+
+        // Temporary offset to be patched later
+        self.emit_byte(0xff);
+        self.emit_byte(0xff);
+
+        self.current_chunk().count() - 2
+    }
+
     fn end_compiler(&mut self) {
         self.emit_return();
 
@@ -188,6 +198,8 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
     fn statement(&mut self) {
         if self.match_(TokenType::Print) {
             self.print_statement();
+        } else if self.match_(TokenType::If) {
+            self.if_statement();
         } else if self.match_(TokenType::LeftBrace) {
             self.begin_scope();
             self.block();
@@ -201,6 +213,49 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         self.expression();
         self.consume(TokenType::Semicolon, "Expect ';' after value.");
         self.emit_opcode(OpCode::Print);
+    }
+
+    fn if_statement(&mut self) {
+        self.consume(TokenType::LeftParen, "Expect '(' after if.");
+        self.expression(); // condition
+        self.consume(TokenType::RightParen, "Expect ')' after condition.");
+
+        // Store our current location so we can patch an offset in later
+        let then_jump = self.emit_jump(OpCode::JumpIfFalse);
+
+        // Pop the condition value before executing the "then" body
+        self.emit_opcode(OpCode::Pop);
+
+        // Consume the "then" body
+        self.statement();
+
+        // Emit a jump to skip the "else" body
+        let else_jump = self.emit_jump(OpCode::Jump);
+
+        // We've arrived at the location of the "else" body so patch in our offset
+        self.patch_jump(then_jump);
+
+        // Pop the condition value before executing the "else" body
+        self.emit_opcode(OpCode::Pop);
+
+        // Consume the "else" body
+        if self.match_(TokenType::Else) {
+            self.statement();
+        }
+
+        // We've passed the entire if-else statement so patch in the "else" offset
+        self.patch_jump(else_jump);
+    }
+
+    fn patch_jump(&mut self, offset: usize) {
+        let jump = self.current_chunk().count() - offset - 2;
+
+        if jump > u16::MAX as usize {
+            self.error("Too much code to jump over.");
+        }
+
+        self.current_chunk_mut().code[offset] = ((jump >> 8) & 0xff) as u8;
+        self.current_chunk_mut().code[offset + 1] = (jump & 0xff) as u8;
     }
 
     fn begin_scope(&mut self) {

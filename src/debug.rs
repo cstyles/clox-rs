@@ -32,6 +32,8 @@ impl Chunk {
                 self.simple_instruction(instruction.name(), offset)
             }
             GetLocal | SetLocal => self.byte_instruction(instruction.name(), offset),
+            Jump => self.jump_instruction(instruction.name(), 1, offset),
+            JumpIfFalse => self.jump_instruction(instruction.name(), 1, offset),
         }
     }
 
@@ -54,5 +56,16 @@ impl Chunk {
         let slot = self.code[offset + 1];
         println!("{:-16} {:4} ", name, slot);
         offset + 2
+    }
+
+    fn jump_instruction(&self, name: &str, sign: u16, offset: usize) -> usize {
+        let top = self.code[offset + 1] as u16;
+        let bottom = self.code[offset + 2] as u16;
+        let jump = (top << 8) | bottom;
+
+        let destination = (3 + sign * jump) as usize;
+        println!("{:-16} {:4} -> {}", name, offset, offset + destination);
+
+        offset + 3
     }
 }

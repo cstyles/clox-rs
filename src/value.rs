@@ -52,7 +52,7 @@ impl PartialEq for Value {
 }
 
 impl Value {
-    fn is_falsey(&self) -> bool {
+    pub fn is_falsey(&self) -> bool {
         match *self {
             Value::Bool(value) => !value,
             Value::Nil => true,

@@ -26,6 +26,8 @@ pub enum OpCode {
     SetGlobal = 18,
     GetLocal = 19,
     SetLocal = 20,
+    JumpIfFalse = 21,
+    Jump = 22,
 }
 
 impl OpCode {
@@ -52,6 +54,8 @@ impl OpCode {
             OpCode::SetGlobal => "OP_SET_GLOBAL",
             OpCode::GetLocal => "OP_GET_LOCAL",
             OpCode::SetLocal => "OP_SET_LOCAL",
+            OpCode::JumpIfFalse => "OP_JUMP_IF_FALSE",
+            OpCode::Jump => "OP_JUMP",
         }
     }
 }
@@ -80,6 +84,10 @@ impl Chunk {
     pub fn add_constant(&mut self, constant: Value) -> usize {
         self.constants.push(constant);
         self.constants.len() - 1
+    }
+
+    pub fn count(&self) -> usize {
+        self.code.len()
     }
 }
 
