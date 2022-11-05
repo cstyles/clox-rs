@@ -331,6 +331,7 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
     }
 
     fn parse_precedence(&mut self, precedence: Precedence) {
+        // TODO: document this function
         self.advance();
         let prefix_rule = self
             .get_parse_rule(self.previous.unwrap().token_type)
@@ -631,6 +632,38 @@ fn variable(compiler: &mut Compiler, can_assign: bool) {
     compiler.named_variable(compiler.previous.unwrap(), can_assign);
 }
 
+fn and(compiler: &mut Compiler, _can_assign: bool) {
+    // We've evaluated the left-hand side of the And operator and its value is on the stack.
+    // If it's false, we can skip evaluating the right-hand side.
+    let end_jump = compiler.emit_jump(OpCode::JumpIfFalse);
+
+    // Otherwise, discard the left value (true) and evaluate the right side
+    compiler.emit_opcode(OpCode::Pop);
+    compiler.parse_precedence(Precedence::And);
+
+    // Patch our offset so the earlier JumpIfFalse knows where to go
+    compiler.patch_jump(end_jump);
+}
+
+fn or(compiler: &mut Compiler, _can_assign: bool) {
+    // We've evaluated the left-hand side of the And operator and its value is on the stack.
+    // If it's false, we need to evaluate the right hand side
+    let else_jump = compiler.emit_jump(OpCode::JumpIfFalse);
+
+    // Otherwise, skip to the end
+    let end_jump = compiler.emit_jump(OpCode::Jump);
+
+    // Patch our offset so the "else jump" (when the left side is false) knows where to go)
+    compiler.patch_jump(else_jump);
+
+    // Discard the left value (false) and evaluate the right side
+    compiler.emit_opcode(OpCode::Pop);
+    compiler.parse_precedence(Precedence::Or);
+
+    // Patch our offset so the "if jump" (when the left side is true) knows where to go)
+    compiler.patch_jump(end_jump);
+}
+
 static RULE_TABLE: [ParseRule; 40] = [
     // LeftParen
     ParseRule {
@@ -767,8 +800,8 @@ static RULE_TABLE: [ParseRule; 40] = [
     // And
     ParseRule {
         prefix: None,
-        infix: None,
-        precedence: Precedence::None,
+        infix: Some(and),
+        precedence: Precedence::And,
     },
     // Class
     ParseRule {
@@ -815,8 +848,8 @@ static RULE_TABLE: [ParseRule; 40] = [
     // Or
     ParseRule {
         prefix: None,
-        infix: None,
-        precedence: Precedence::None,
+        infix: Some(or),
+        precedence: Precedence::Or,
     },
     // Print
     ParseRule {
