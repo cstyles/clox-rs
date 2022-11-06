@@ -104,8 +104,14 @@ impl Vm {
                 }
                 OpCode::DefineGlobal => {
                     let name = self.read_string().string();
-                    let value = self.pop();
-                    self.globals.insert(name, value);
+                    let value = self.peek(0);
+                    self.globals.insert(name, value.clone());
+
+                    // We don't pop the value until after we've added it to
+                    // `globals` so that the VM can still find it in the event
+                    // that a GC run is triggered in the middle of adding the
+                    // value to `globals`.
+                    let _value = self.pop();
                 }
                 OpCode::GetGlobal => {
                     let name = self.read_string().string();
