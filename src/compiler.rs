@@ -214,6 +214,8 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
     fn statement(&mut self) {
         if self.match_(TokenType::Print) {
             self.print_statement();
+        } else if self.match_(TokenType::For) {
+            self.for_statement();
         } else if self.match_(TokenType::If) {
             self.if_statement();
         } else if self.match_(TokenType::While) {
@@ -231,6 +233,63 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         self.expression();
         self.consume(TokenType::Semicolon, "Expect ';' after value.");
         self.emit_opcode(OpCode::Print);
+    }
+
+    fn for_statement(&mut self) {
+        self.begin_scope();
+        self.consume(TokenType::LeftParen, "Expect '(' after for.");
+
+        // Handle the initializer clause
+        if self.match_(TokenType::Semicolon) {
+            // No initializer.
+        } else if self.match_(TokenType::Var) {
+            self.variable_declaration();
+        } else {
+            self.expression_statement();
+        }
+
+        // Record current location to return to after each loop iteration
+        let mut loop_start = self.current_chunk().count();
+
+        // Handle the condition clause
+        let exit_jump = if !self.match_(TokenType::Semicolon) {
+            self.expression(); // condition
+            self.consume(TokenType::Semicolon, "Expect ';' after loop condition.");
+
+            let exit_jump = self.emit_jump(OpCode::JumpIfFalse);
+            self.emit_opcode(OpCode::Pop); // pop the condition (true)
+            Some(exit_jump)
+        } else {
+            None
+        };
+
+        // Handle the increment clause
+        if !self.match_(TokenType::RightParen) {
+            let body_jump = self.emit_jump(OpCode::Jump);
+            let increment_start = self.current_chunk().count();
+
+            self.expression();
+            self.emit_opcode(OpCode::Pop); // discard result of increment expression
+            self.consume(TokenType::RightParen, "Expect ')' after for clauses.");
+
+            self.emit_loop(loop_start);
+
+            // Update loop_start so we return to the increment expression after every
+            // iteration.
+            loop_start = increment_start;
+            self.patch_jump(body_jump);
+        }
+
+        self.statement(); // Loop body
+        self.emit_loop(loop_start);
+
+        // If there was a condition clause, patch the jump instruction
+        if let Some(exit_jump) = exit_jump {
+            self.patch_jump(exit_jump);
+            self.emit_opcode(OpCode::Pop); // pop the condition (false)
+        }
+
+        self.end_scope();
     }
 
     fn if_statement(&mut self) {
