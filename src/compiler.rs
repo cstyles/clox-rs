@@ -158,6 +158,22 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         self.current_chunk().count() - 2
     }
 
+    fn emit_loop(&mut self, loop_start: usize) {
+        self.emit_opcode(OpCode::Loop);
+
+        // Distance between loop instruction and beginning of loop.
+        // +2 accounts for the operands to Loop.
+        let offset = self.current_chunk().count() - loop_start + 2;
+        if offset > u16::MAX as usize {
+            self.error("Loop body too large.");
+        }
+
+        let top = ((offset >> 8) & 0xff) as u8;
+        let bottom = (offset & 0xff) as u8;
+        self.emit_byte(top);
+        self.emit_byte(bottom);
+    }
+
     fn end_compiler(&mut self) {
         self.emit_return();
 
@@ -200,6 +216,8 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
             self.print_statement();
         } else if self.match_(TokenType::If) {
             self.if_statement();
+        } else if self.match_(TokenType::While) {
+            self.while_statement();
         } else if self.match_(TokenType::LeftBrace) {
             self.begin_scope();
             self.block();
@@ -245,6 +263,30 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
 
         // We've passed the entire if-else statement so patch in the "else" offset
         self.patch_jump(else_jump);
+    }
+
+    fn while_statement(&mut self) {
+        let loop_start = self.current_chunk().count();
+
+        self.consume(TokenType::LeftParen, "Expect '(' after while.");
+        self.expression(); // condition
+        self.consume(TokenType::RightParen, "Expect ')' after condition.");
+
+        // Store our current location so we can patch an offset in later
+        let exit_jump = self.emit_jump(OpCode::JumpIfFalse);
+
+        // Pop the condition value (true) before executing the body
+        self.emit_opcode(OpCode::Pop);
+
+        // Consume the body of the while loop
+        self.statement();
+        self.emit_loop(loop_start);
+
+        // We've passed the entire block so let's patch in the jump offset
+        self.patch_jump(exit_jump);
+
+        // Pop the condition value (false) after skipping the body
+        self.emit_opcode(OpCode::Pop);
     }
 
     fn patch_jump(&mut self, offset: usize) {

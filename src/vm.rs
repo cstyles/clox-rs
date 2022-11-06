@@ -146,6 +146,9 @@ impl Vm {
                 OpCode::Jump => {
                     self.ip += self.read_short() as usize;
                 }
+                OpCode::Loop => {
+                    self.ip -= self.read_short() as usize;
+                }
             }
         }
     }
