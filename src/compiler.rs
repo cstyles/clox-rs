@@ -377,9 +377,10 @@ impl<'src, 'vm> Compiler<'src, 'vm> {
         // Clean up any local variables in the current scope
         while let Some(local) = self.locals.locals.last() {
             // Stop if we encounter a parent scope
+            // Or global scope (depth == None)
             if local
                 .depth
-                .map_or(true, |depth| depth < self.locals.scope_depth)
+                .map_or(true, |depth| depth <= self.locals.scope_depth)
             {
                 break;
             }
